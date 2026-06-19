@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MaizeScan AI - Nutrient Deficiency Predictor</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-leaf"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>MaizeScan <span>AI</span></h1>
+                    <p>Agro-Diagnostic Suite</p>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-item active" data-target="dashboard-section">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Diagnostic Desk</span>
+                </button>
+                <button class="nav-item" data-target="guide-section">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>Agronomy Guide</span>
+                </button>
+
+                <!-- TITLE YA NEURAL NETWORK
+
+                <button class="nav-item" data-target="metrics-section">
+                    <i class="fa-solid fa-microchip"></i>
+                    <span>Neural Network</span>
+                </button>
+                
+            -->
+                <button class="nav-item" data-target="history-section">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    <span>Field Log</span>
+                </button>
+            </nav>
+
+            <div class="api-status-card">
+                <div class="status-indicator">
+                    <span class="status-dot offline" id="status-dot"></span>
+                    <span class="status-label" id="status-label">Connecting API...</span>
+                </div>
+                <p class="status-detail" id="status-detail">Checking local FastAPI service...</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <div class="header-title">
+                    <h2 id="section-title">Diagnostic Desk</h2>
+                    <p id="section-subtitle">Analyze maize leaves for crop nutrient deficiencies </p>
+                </div>
+                <div class="header-stats">
+                    <div class="header-stat-box">
+                        <span class="stat-lbl">Total Scans</span>
+                        <span class="stat-val" id="stat-scans-count">0</span>
+                    </div>
+                    <div class="header-stat-box">
+                        <span class="stat-lbl">Healthy Ratio</span>
+                        <span class="stat-val" id="stat-healthy-ratio">0%</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Sections -->
+            <div class="content-body">
+
+                <!-- 1. DASHBOARD / DIAGNOSTIC DESK -->
+                <section id="dashboard-section" class="tab-content active">
+                    <div class="dashboard-grid">
+
+                        <!-- Left Side: Upload & Computer Vision -->
+                        <div class="grid-col-left">
+                            <div class="glass-card upload-card">
+                                <div class="card-header">
+                                    <h3><i class="fa-solid fa-camera"></i> Leaf Image Upload</h3>
+                                    <p>Select or drag a leaf photograph of your maize plant</p>
+                                </div>
+
+                                <div class="drop-zone" id="drop-zone">
+                                    <input type="file" id="file-input" accept="image/*" class="file-input">
+                                    <div class="drop-zone-content" id="drop-zone-prompt">
+                                        <div class="upload-icon-pulse">
+                                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                                        </div>
+                                        <h4>Drag and drop leaf image</h4>
+                                        <p>Supports JPEG, PNG (Max 5MB)</p>
+                                        <button class="btn btn-primary-outline">Browse Files</button>
+                                    </div>
+
+                                    <div class="preview-container hidden" id="preview-container">
+                                        <img id="image-preview" src="#" alt="Leaf Preview">
+                                        <div class="scan-overlay hidden" id="scan-overlay">
+                                            <div class="scan-bar"></div>
+                                        </div>
+                                        <button class="btn-clear-preview" id="btn-clear-preview" title="Remove image">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="card-footer">
+                                    <button class="btn btn-primary w-full" id="btn-analyze" disabled>
+                                        <i class="fa-solid fa-magnifying-glass"></i> Analyze Specimen
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Computer Vision Insights -->
+                            <div class="glass-card cv-card hidden" id="cv-card">
+                                <div class="card-header">
+                                    <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Computer Vision Insight</h3>
+                                    <p>Real-time RGB color distribution & edge analysis</p>
+                                </div>
+                                <div class="cv-body">
+                                    <div class="cv-canvas-wrapper">
+                                        <div class="canvas-item">
+                                            <span class="canvas-lbl">Color Channel Mask</span>
+                                            <canvas id="canvas-mask" width="128" height="128"></canvas>
+                                        </div>
+                                        <div class="canvas-item">
+                                            <span class="canvas-lbl">Contrast Edge Map</span>
+                                            <canvas id="canvas-edges" width="128" height="128"></canvas>
+                                        </div>
+                                    </div>
+                                    <div class="cv-metrics">
+                                        <div class="metric-progress-group">
+                                            <div class="metric-lbl">
+                                                <span>Red (Necrosis / Yellowing)</span>
+                                                <span class="metric-val" id="r-percent">0%</span>
+                                            </div>
+                                            <div class="metric-bar-bg">
+                                                <div class="metric-bar r-bar" id="r-bar-fill"></div>
+                                            </div>
+                                        </div>
+                                        <div class="metric-progress-group">
+                                            <div class="metric-lbl">
+                                                <span>Green (Chlorophyll Vigor)</span>
+                                                <span class="metric-val" id="g-percent">0%</span>
+                                            </div>
+                                            <div class="metric-bar-bg">
+                                                <div class="metric-bar g-bar" id="g-bar-fill"></div>
+                                            </div>
+                                        </div>
+                                        <div class="metric-progress-group">
+                                            <div class="metric-lbl">
+                                                <span>Blue (Anthocyanin / Purpling)</span>
+                                                <span class="metric-val" id="b-percent">0%</span>
+                                            </div>
+                                            <div class="metric-bar-bg">
+                                                <div class="metric-bar b-bar" id="b-bar-fill"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Side: Diagnostics -->
+                        <div class="grid-col-right">
+                            <div class="glass-card results-card" id="results-card">
+                                <!-- Empty State -->
+                                <div class="results-empty" id="results-empty">
+                                    <div class="empty-icon">
+                                        <i class="fa-solid fa-microscope"></i>
+                                    </div>
+                                    <h4>Awaiting Specimen</h4>
+                                    <p>Upload a high-quality photo of a maize leaf to initiate the AI neural network
+                                        diagnostic scan.</p>
+                                </div>
+
+                                <!-- Loading State -->
+                                <div class="results-loading hidden" id="results-loading">
+                                    <div class="spinner-glow">
+                                        <i class="fa-solid fa-circle-notch fa-spin"></i>
+                                    </div>
+                                    <h4>Inference in Progress...</h4>
+                                    <p id="loading-text">Feedforward processing through CNN layers...</p>
+                                </div>
+
+                                <!-- Real Results -->
+                                <div class="results-display hidden" id="results-display">
+                                    <div class="results-top">
+                                        <div class="diagnosis-summary">
+                                            <span class="diagnosis-badge" id="diagnosis-id-badge">Nitrogen</span>
+                                            <h3 class="diagnosis-title" id="diagnosis-title">Nitrogen (N) Deficiency
+                                            </h3>
+                                            <p class="diagnosis-desc" id="diagnosis-desc">Short description of the
+                                                deficiency.</p>
+                                        </div>
+
+                                        <!-- Gauge -->
+                                        <div class="confidence-gauge-box">
+                                            <svg class="progress-ring" width="80" height="80">
+                                                <circle class="progress-ring__circle-bg" stroke="rgba(255,255,255,0.05)"
+                                                    stroke-width="6" fill="transparent" r="32" cx="40" cy="40" />
+                                                <circle class="progress-ring__circle" id="confidence-circle"
+                                                    stroke="#10b981" stroke-width="6" fill="transparent" r="32" cx="40"
+                                                    cy="40" />
+                                            </svg>
+                                            <div class="gauge-value">
+                                                <span class="val" id="confidence-percent">95%</span>
+                                                <span class="lbl">Match</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Class Breakdown Mini Chart -->
+                                    <div class="breakdown-chart">
+                                        <div class="chart-bar-item" id="breakdown-nitrogen">
+                                            <span class="lbl">Nitrogen (N)</span>
+                                            <div class="bar-container">
+                                                <div class="bar-fill" style="width: 0%;"></div>
+                                            </div>
+                                            <span class="val">0%</span>
+                                        </div>
+                                        <div class="chart-bar-item" id="breakdown-phosphorus">
+                                            <span class="lbl">Phosphorus (P)</span>
+                                            <div class="bar-container">
+                                                <div class="bar-fill" style="width: 0%;"></div>
+                                            </div>
+                                            <span class="val">0%</span>
+                                        </div>
+                                        <div class="chart-bar-item" id="breakdown-potassium">
+                                            <span class="lbl">Potassium (K)</span>
+                                            <div class="bar-container">
+                                                <div class="bar-fill" style="width: 0%;"></div>
+                                            </div>
+                                            <span class="val">0%</span>
+                                        </div>
+                                        <div class="chart-bar-item" id="breakdown-healthy">
+                                            <span class="lbl">Healthy Leaf</span>
+                                            <div class="bar-container">
+                                                <div class="bar-fill" style="width: 0%;"></div>
+                                            </div>
+                                            <span class="val">0%</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Interactive Tabs -->
+                                    <div class="results-details">
+                                        <div class="detail-tabs">
+                                            <button class="tab-btn active" data-tab="tab-symptoms">Symptoms</button>
+                                            <button class="tab-btn" data-tab="tab-causes">Root Causes</button>
+                                            <button class="tab-btn" data-tab="tab-treatment">Treatment</button>
+                                            <button class="tab-btn" data-tab="tab-prevention">Prevention</button>
+                                        </div>
+
+                                        <div class="tab-panes">
+                                            <!-- Symptoms -->
+                                            <div class="tab-pane active" id="tab-symptoms">
+                                                <ul class="bullet-list" id="symptoms-list">
+                                                    <li>Leaf margins are yellow.</li>
+                                                </ul>
+                                            </div>
+                                            <!-- Causes -->
+                                            <div class="tab-pane" id="tab-causes">
+                                                <ul class="bullet-list" id="causes-list">
+                                                    <li>Low soil pH.</li>
+                                                </ul>
+                                            </div>
+                                            <!-- Treatment -->
+                                            <div class="tab-pane" id="tab-treatment">
+                                                <div class="alert-box alert-success">
+                                                    <i class="fa-solid fa-kit-medical"></i>
+                                                    <div>
+                                                        <h5>Immediate Corrective Action</h5>
+                                                        <p id="treatment-text">Apply urea.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Prevention -->
+                                            <div class="tab-pane" id="tab-prevention">
+                                                <ul class="bullet-list" id="prevention-list">
+                                                    <li>Apply manure in winter.</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="results-actions">
+                                        <button class="btn btn-primary" id="btn-save-log">
+                                            <i class="fa-solid fa-floppy-disk"></i> Log to Field History
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. AGRONOMY GUIDE -->
+                <section id="guide-section" class="tab-content">
+                    <div class="section-card-intro">
+                        <h3>Maize Leaf Deficiency Agronomy Catalog</h3>
+                        <p>Learn the visual cues and underlying chemistry of major nutritional stresses in Zea mays
+                            crops.</p>
+                    </div>
+
+                    <div class="guide-grid">
+                        <!-- Nitrogen -->
+                        <div class="guide-card" data-deficiency="0">
+                            <div class="guide-card-header nitrogen-accent">
+                                <div class="badge">N</div>
+                                <h4>Nitrogen Deficiency</h4>
+                            </div>
+                            <div class="guide-card-img">
+                                <img src="http://127.0.0.1:8000/samples/sample_nitrogen.png" id="guide-img-n"
+                                    alt="Nitrogen Deficiency Sample"
+                                    onerror="this.src='https://placehold.co/400x300/101a30/ffd700?text=Nitrogen+Deficiency'">
+                            </div>
+                            <div class="guide-card-body">
+                                <h5>Visual Cue:</h5>
+                                <p>V-shaped chlorosis (yellowing) beginning at the leaf tip and working down the central
+                                    midrib. Older leaves are affected first.</p>
+                                <span class="card-detail-trigger">Read details &rarr;</span>
+                            </div>
+                        </div>
+
+                        <!-- Phosphorus -->
+                        <!--
+                        <div class="guide-card" data-deficiency="1">
+                            <div class="guide-card-header phosphorus-accent">
+                                <div class="badge">P</div>
+                                <h4>Phosphorus Deficiency</h4>
+                            </div>
+                            <div class="guide-card-img">
+                                <img src="http://127.0.0.1:8000/samples/sample_phosphorus.png" id="guide-img-p"
+                                    alt="Phosphorus Deficiency Sample"
+                                    onerror="this.src='https://placehold.co/400x300/101a30/da70d6?text=Phosphorus+Deficiency'">
+                            </div>
+                            <div class="guide-card-body">
+                                <h5>Visual Cue:</h5>
+                                <p>Distinct purple, red, or copper-colored borders on older leaf edges. Plants remain
+                                    dark green but are severely stunted.</p>
+                                <span class="card-detail-trigger">Read details &rarr;</span>
+                            </div>
+                        </div>
+                        
+
+                        <!-- Potassium -->
+
+                        <!---    <div class="guide-card" data-deficiency="2">
+                            <div class="guide-card-header potassium-accent">
+                                <div class="badge">K</div>
+                                <h4>Potassium Deficiency</h4>
+                            </div>
+                            <div class="guide-card-img">
+                                <img src="http://127.0.0.1:8000/samples/sample_potassium.png" id="guide-img-k" alt="Potassium Deficiency Sample" onerror="this.src='https://placehold.co/400x300/101a30/ff8c00?text=Potassium+Deficiency'">
+                            </div>
+                            <div class="guide-card-body">
+                                <h5>Visual Cue:</h5>
+                                <p>Chlorosis and necrosis (firing/scorching) along the leaf edges (margins), starting at the tip and progressing inwards.</p>
+                                <span class="card-detail-trigger">Read details &rarr;</span>
+                            </div>
+                        </div>-->
+
+                        <!-- Healthy -->
+                        <div class="guide-card" data-deficiency="3">
+                            <div class="guide-card-header healthy-accent">
+                                <div class="badge"><i class="fa-solid fa-check"></i></div>
+                                <h4>Optimal / Healthy</h4>
+                            </div>
+                            <div class="guide-card-img">
+                                <img src="http://127.0.0.1:8000/samples/sample_healthy.png" id="guide-img-healthy"
+                                    alt="Healthy Sample"
+                                    onerror="this.src='https://placehold.co/400x300/101a30/228b22?text=Healthy+Leaf'">
+                            </div>
+                            <div class="guide-card-body">
+                                <h5>Visual Cue:</h5>
+                                <p>Uniform, glossy dark green pigmentation across the entire blade. No margin necrosis
+                                    or midrib chlorosis.</p>
+                                <span class="card-detail-trigger">Read details &rarr;</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. NEURAL NETWORK METRICS -->
+                <!--SEHEMU YA KUTRAIN MODEL TENSOR FLOW AND CNN
+
+                <section id="metrics-section" class="tab-content">
+                    <div class="metrics-container">
+                        <div class="metrics-grid">
+
+                            Left: Architecture 
+
+                            <div class="glass-card arch-card">
+                                <div class="card-header">
+                                    <h3><i class="fa-solid fa-network-wired"></i> Convolutional Neural Network</h3>
+                                    <p>MaizeLeafCNN Layer Architecture Flow</p>
+                                </div>
+                                <div class="arch-body">
+                                    <div class="layer-flow">
+                                        <div class="layer-node input">
+                                            <span class="layer-type">Input</span>
+                                            <span class="layer-size">128 × 128 × 3 (RGB Image)</span>
+                                        </div>
+                                        <div class="flow-arrow"><i class="fa-solid fa-angle-down"></i></div>
+
+                                        <div class="layer-node">
+                                            <span class="layer-type">Conv2D + BatchNorm + ReLU</span>
+                                            <span class="layer-size">128 × 128 × 16 (Filters)</span>
+                                        </div>
+                                        <div class="flow-arrow"><i class="fa-solid fa-angle-down"></i></div>
+
+                                        <div class="layer-node pool">
+                                            <span class="layer-type">MaxPool2D</span>
+                                            <span class="layer-size">64 × 64 × 16</span>
+                                        </div>
+                                        <div class="flow-arrow"><i class="fa-solid fa-angle-down"></i></div>
+
+                                        <div class="layer-node">
+                                            <span class="layer-type">Conv2D × 3 Blocks + Pooling</span>
+                                            <span class="layer-size">8 × 8 × 128 (Latent Feature Map)</span>
+                                        </div>
+                                        <div class="flow-arrow"><i class="fa-solid fa-angle-down"></i></div>
+
+                                        <div class="layer-node pool">
+                                            <span class="layer-type">AdaptiveAvgPool2D</span>
+                                            <span class="layer-size">4 × 4 × 128 (Flatten: 2048)</span>
+                                        </div>
+                                        <div class="flow-arrow"><i class="fa-solid fa-angle-down"></i></div>
+
+                                        <div class="layer-node fc">
+                                            <span class="layer-type">Dense Fully Connected + Dropout</span>
+                                            <span class="layer-size">128 Neurons</span>
+                                        </div>
+                                        <div class="flow-arrow"><i class="fa-solid fa-angle-down"></i></div>
+
+                                        <div class="layer-node output">
+                                            <span class="layer-type">Output (Softmax)</span>
+                                            <span class="layer-size">4 Classes (N, P, K, Healthy)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            Right: Training Controls 
+
+
+                            <div class="glass-card metrics-details-card">
+                                <div class="card-header">
+                                    <h3><i class="fa-solid fa-sliders"></i> Model Training & Performance</h3>
+                                    <p>Monitor and retrain the classifier dynamically</p>
+                                </div>
+                                <div class="metrics-details-body">
+                                    <div class="metric-scorecard-grid">
+                                        <div class="score-card">
+                                            <span class="lbl">Train Accuracy</span>
+                                            <span class="val">~98.5%</span>
+                                        </div>
+                                        <div class="score-card">
+                                            <span class="lbl">Validation Accuracy</span>
+                                            <span class="val">~97.2%</span>
+                                        </div>
+                                        <div class="score-card">
+                                            <span class="lbl">Learning Rate</span>
+                                            <span class="val">0.001</span>
+                                        </div>
+                                        <div class="score-card">
+                                            <span class="lbl">Optimization</span>
+                                            <span class="val">Adam</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="training-console-box">
+                                        <h5>Model Status Console</h5>
+                                        <div class="console-output" id="console-output">
+                                            [system] Connecting to local FastAPI service...
+                                            [system] Model status check complete. Loaded on CPU.
+                                        </div>
+                                    </div>
+
+                                    <div class="model-actions">
+                                        <button class="btn btn-warning w-full" id="btn-retrain">
+                                            <i class="fa-solid fa-rotate"></i> Retrain Model (Synthetic Dataset)
+                                        </button>
+                                        <p class="btn-note">Triggers model rebuild using 1000 dynamically rendered leaf
+                                            variants. Takes ~20 seconds.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+            -->
+
+
+
+
+
+
+                <!-- 4. FIELD LOG / HISTORY -->
+                <section id="history-section" class="tab-content">
+                    <div class="glass-card history-card">
+                        <div class="card-header-flex">
+                            <div>
+                                <h3><i class="fa-solid fa-database"></i> Specimen Field History</h3>
+                                <p>Track previous diagnostic runs and field logs</p>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary-outline btn-sm" id="btn-export-history">
+                                    <i class="fa-solid fa-download"></i> Export CSV
+                                </button>
+                                <button class="btn btn-danger-outline btn-sm" id="btn-clear-history">
+                                    <i class="fa-solid fa-trash-can"></i> Clear Log
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="history-table-container">
+                            <table class="history-table" id="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date & Time</th>
+                                        <th>Filename</th>
+                                        <th>Visual Analysis Target</th>
+                                        <th>AI Prediction</th>
+                                        <th>Confidence Match</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-tbody">
+                                    <!-- Dynamic rows go here -->
+                                    <tr class="table-empty-row">
+                                        <td colspan="6">No specimens scanned yet. Diagnostics logged from the Diagnostic
+                                            Desk appear here.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Details Modal (Reusable popup) -->
+    <div class="modal-overlay hidden" id="guide-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h4 id="modal-deficiency-name">Deficiency Name</h4>
+                <button class="modal-close" id="modal-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-img-container">
+                    <img id="modal-img" src="#" alt="Deficiency Specimen">
+                </div>
+                <div class="modal-info">
+                    <h5>Overview</h5>
+                    <p id="modal-desc">Description here.</p>
+
+                    <h5>Common Field Symptoms</h5>
+                    <ul class="bullet-list" id="modal-symptoms">
+                    </ul>
+
+                    <h5>Root Causes</h5>
+                    <ul class="bullet-list" id="modal-causes">
+                    </ul>
+
+                    <h5>Treatment Measures</h5>
+                    <p id="modal-treatment" class="modal-alert-text"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script src="app.js"></script>
+</body>
+
+</html>
